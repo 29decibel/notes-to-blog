@@ -1,0 +1,6 @@
+#!/bin/sh
+
+# Sync notes to blog
+# Usage: ./sync.sh
+
+osascript blog.js > blog.json
