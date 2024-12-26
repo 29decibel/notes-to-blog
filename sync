@@ -3,4 +3,14 @@
 # Sync notes to blog
 # Usage: ./sync.sh
 
+# ensure npm modules are installed
+echo "Installing npm modules..."
+npm install
+
+# sync all the notes in the blog folder
+echo "Syncing notes..."
 osascript blog.js > blog.json
+
+# then we can process it
+echo "Processing notes..."
+node process-notes.js ./blog.json
