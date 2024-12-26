@@ -9,7 +9,7 @@ npm install
 
 # sync all the notes in the blog folder
 echo "Syncing notes..."
-osascript blog.js > blog.json
+osascript save-notes-to-json.js > blog.json
 
 # then we can process it
 echo "Processing notes..."
