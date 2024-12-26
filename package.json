@@ -1,0 +1,15 @@
+{
+  "name": "notes-to-blog",
+  "version": "1.0.0",
+  "description": "```bash osascript blog.js > blog.json ```",
+  "main": "blog.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "cheerio": "^1.0.0"
+  }
+}
