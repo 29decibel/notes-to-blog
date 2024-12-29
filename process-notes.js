@@ -47,7 +47,14 @@ const processHtml = async (html, imageDir) => {
 
   // Add CSS link
   $("head").length ? $("head") : $("html").prepend("<head>");
-  $("head").prepend('<link rel="stylesheet" href="style.css">');
+  // $("head").prepend('<link rel="stylesheet" href="style.css">');
+
+  // Add UTF-8 meta tag and CSS link
+  $("head").prepend(`
+     <meta charset="UTF-8">
+     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+     <link rel="stylesheet" href="style.css">
+   `);
 
   // Wrap content in body if it doesn't exist
   if (!$("body").length) {
