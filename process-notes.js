@@ -35,7 +35,7 @@ const copyStylesheet = async (htmlDir) => {
   }
 };
 
-const processHtml = async (html, imageDir) => {
+const processHtml = async (html, imageDir, publishedDate) => {
   try {
     await fs.mkdir(imageDir);
   } catch (err) {
@@ -59,6 +59,17 @@ const processHtml = async (html, imageDir) => {
   // Wrap content in body if it doesn't exist
   if (!$("body").length) {
     $("*").wrapAll("<body>");
+  }
+
+  // Add published date after the first h1 (title)
+  const h1 = $("h1").first();
+  if (h1.length) {
+    const formattedDate = new Date(publishedDate).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+    h1.after(`<div class="published-date">Published on ${formattedDate}</div>`);
   }
 
   const promises = $('img[src^="data:image"]')
@@ -97,6 +108,52 @@ const processHtml = async (html, imageDir) => {
   return $.html();
 };
 
+// Add this new function to generate the index HTML
+const generateIndex = async (notes, htmlDir) => {
+  const $ = cheerio.load(
+    "<!DOCTYPE html><html><head></head><body></body></html>",
+  );
+
+  // Add meta tags and CSS
+  $("head").append(`
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <link rel="stylesheet" href="style.css">
+    <title>Notes Index</title>
+  `);
+
+  // Add header and list of notes
+  $("body").append(`
+    <h1>Notes Index</h1>
+    <ul class="notes-list">
+      ${notes
+        .sort((a, b) => new Date(b.created) - new Date(a.created)) // Sort by date, newest first
+        .map((note) => {
+          const fileName = `${note.name.replace(/[^a-z0-9]/gi, "_")}.html`;
+          const date = new Date(note.created).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          });
+          return `
+            <li>
+              <div class="note-link">
+                <a href="${fileName}">${note.name}</a>
+                <span class="note-date">${date}</span>
+              </div>
+            </li>
+          `;
+        })
+        .join("")}
+    </ul>
+  `);
+
+  // Write the index file
+  const indexPath = join(htmlDir, "index.html");
+  await fs.writeFile(indexPath, $.html());
+  console.log(`Index page generated at ${indexPath}`);
+};
+
 const main = async () => {
   try {
     const jsonPath = process.argv[2];
@@ -125,7 +182,7 @@ const main = async () => {
     const processedNotes = await Promise.all(
       data.notes.map(async (note) => ({
         ...note,
-        body: await processHtml(note.body, imageDir),
+        body: await processHtml(note.body, imageDir, note.created),
       })),
     );
 
@@ -138,6 +195,7 @@ const main = async () => {
     await fs.writeFile(outputPath, JSON.stringify(output, null, 2));
     console.log(`Processed JSON saved to ${outputPath}`);
 
+    // generate HTML files for each note
     await Promise.all(
       processedNotes.map(async (note) => {
         const htmlPath = join(
@@ -148,6 +206,9 @@ const main = async () => {
         console.log(`HTML saved to ${htmlPath}`);
       }),
     );
+
+    // Generate index.html
+    await generateIndex(processedNotes, htmlDir);
   } catch (error) {
     console.error("Error:", error);
     process.exit(1);

@@ -107,3 +107,41 @@ h1 {
     }
 }
 /* END- Base code block styling */
+
+.published-date {
+    color: #666;
+    font-style: italic;
+    margin-bottom: 2em;
+    font-size: 0.9em;
+}
+
+/* Index page styles */
+.notes-list {
+    list-style: none;
+    padding: 0;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.note-link {
+    padding: 1em 0;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.note-link a {
+    text-decoration: none;
+    color: #333;
+    font-size: 1.1em;
+}
+
+.note-link a:hover {
+    color: #007bff;
+}
+
+.note-date {
+    color: #666;
+    font-size: 0.9em;
+}
