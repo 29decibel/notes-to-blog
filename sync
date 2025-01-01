@@ -5,12 +5,12 @@
 
 # ensure npm modules are installed
 echo "Installing npm modules..."
-npm install
+bun install
 
 # sync all the notes in the blog folder
 echo "Syncing notes..."
-osascript save-notes-to-json.js > blog.json
+osascript save-notes-to-json.js >blog.json
 
 # then we can process it
 echo "Processing notes..."
-node process-notes.js ./blog.json
+bun process-notes.js ./blog.json
