@@ -53,7 +53,7 @@ This folder has a simple `publish` script that will help you deploy to Github Pa
 
 ### Example site
 
-Here is an example site generated from Apple notes:
+Here is an example site generated from Apple notes using Github pages (using custom domain):
 
 https://writing.dongbin.li/
 
