@@ -61,6 +61,10 @@ const processHtml = async (html, imageDir, publishedDate) => {
     $("*").wrapAll("<body>");
   }
 
+  // find the first h1 as title and append it as <title> element in the head
+  const title = $("h1").first().text();
+  $("head").append(`<title>${title}</title>`);
+
   // append published on date to the end of the body
   const formattedDate = new Date(publishedDate).toLocaleDateString("en-US", {
     year: "numeric",
@@ -108,7 +112,7 @@ const processHtml = async (html, imageDir, publishedDate) => {
 };
 
 // Add this new function to generate the index HTML
-const generateIndex = async (notes, htmlDir) => {
+const generateIndex = async (notes, htmlDir, siteName) => {
   const $ = cheerio.load(
     "<!DOCTYPE html><html><head></head><body></body></html>",
   );
@@ -118,12 +122,12 @@ const generateIndex = async (notes, htmlDir) => {
     <meta charset="UTF-8">
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <link rel="stylesheet" href="style.css">
-    <title>Notes Index</title>
+    <title>${siteName}</title>
   `);
 
   // Add header and list of notes
   $("body").append(`
-    <h1>Notes Index</h1>
+    <h1>${siteName}</h1>
     <ul class="notes-list">
       ${notes
         .sort((a, b) => new Date(b.created) - new Date(a.created)) // Sort by date, newest first
@@ -211,7 +215,7 @@ const main = async () => {
     );
 
     // Generate index.html
-    await generateIndex(processedNotes, htmlDir);
+    await generateIndex(processedNotes, htmlDir, data.name);
   } catch (error) {
     console.error("Error:", error);
     process.exit(1);

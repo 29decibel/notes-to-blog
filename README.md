@@ -50,3 +50,8 @@ This folder has a simple `publish` script that will help you deploy to Github Pa
 # publish git repository to Github Pages
 ./publish ~/writings/a-blog-from-apple-notes
 ```
+
+### What's next
+[ ] Generate RSS feeds
+[ ] Allow passing to custom CSS
+[ ] Allow more metadata control on each notes

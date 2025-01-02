@@ -17,5 +17,5 @@ function run(argv) {
   }));
 
   // Output JSON directly
-  return JSON.stringify({ notes: notesData }, null, 2);
+  return JSON.stringify({ notes: notesData, name: folderName }, null, 2);
 }

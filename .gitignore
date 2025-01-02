@@ -3,3 +3,5 @@ blog.json
 .DS_Store
 /node_modules
 blog_processed.json
+.ruby-lsp
+package-lock.json
