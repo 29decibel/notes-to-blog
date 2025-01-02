@@ -1,16 +1,33 @@
 #!/bin/sh
 
 # Sync notes to blog
-# Usage: ./sync.sh
+# Usage: ./sync.sh <apple_notes_folder> <git_repo_path>
+
+# Check if both parameters are provided
+if [ $# -ne 2 ]; then
+    echo "Error: Two parameters are required"
+    echo "Usage: ./sync <apple_notes_folder_name> <git_repo_path>"
+    echo "Example: ./sync 'Writing' '../../writings/my-blog'"
+    exit 1
+fi
+
+NOTES_FOLDER=$1
+GIT_REPO_PATH=$2
+
+# Validate if the git repo path exists
+if [ ! -d "$GIT_REPO_PATH" ]; then
+    echo "Error: Git repository path '$GIT_REPO_PATH' does not exist"
+    exit 1
+fi
 
 # ensure npm modules are installed
 echo "Installing npm modules..."
 bun install
 
-# sync all the notes in the blog folder
-echo "Syncing notes..."
-osascript save-notes-to-json.js >blog.json
+# sync all the notes in the specified folder
+echo "Syncing notes from folder '$NOTES_FOLDER'..."
+osascript save-notes-to-json.js "$NOTES_FOLDER" > blog.json
 
 # then we can process it
-echo "Processing notes..."
-bun process-notes.js ./blog.json
+echo "Processing notes to repository '$GIT_REPO_PATH'..."
+bun process-notes.js ./blog.json "$GIT_REPO_PATH"

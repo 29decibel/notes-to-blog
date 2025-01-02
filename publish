@@ -1,0 +1,46 @@
+#!/bin/sh
+
+# Check if folder argument is provided
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 <repo_path>"
+    exit 1
+fi
+
+REPO_PATH="$1"
+
+# Check if folder exists and is a git repo
+if [ ! -d "$REPO_PATH/.git" ]; then
+    echo "Error: '$REPO_PATH' is not a git repository"
+    exit 1
+fi
+
+# Change to the repository directory
+cd "$REPO_PATH" || exit 1
+
+echo "📦 Publishing to gh-pages branch..."
+
+# Ensure we have the latest gh-pages branch
+if git show-ref --verify --quiet refs/heads/gh-pages; then
+    # If gh-pages branch exists
+    echo "✨ Updating gh-pages branch..."
+    git checkout gh-pages
+    git pull origin gh-pages
+else
+    # If gh-pages branch doesn't exist
+    echo "✨ Creating gh-pages branch..."
+    git checkout --orphan gh-pages
+fi
+
+# Add all files
+echo "➕ Adding files to git..."
+git add .
+
+# Commit changes
+echo "💾 Committing changes..."
+git commit -m "Update GitHub Pages"
+
+# Push to remote
+echo "🚀 Pushing to remote..."
+git push origin gh-pages
+
+echo "✅ Done! Your changes have been published to GitHub Pages"

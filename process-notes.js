@@ -61,16 +61,15 @@ const processHtml = async (html, imageDir, publishedDate) => {
     $("*").wrapAll("<body>");
   }
 
-  // Add published date after the first h1 (title)
-  const h1 = $("h1").first();
-  if (h1.length) {
-    const formattedDate = new Date(publishedDate).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-    h1.after(`<div class="published-date">Published on ${formattedDate}</div>`);
-  }
+  // append published on date to the end of the body
+  const formattedDate = new Date(publishedDate).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  $("body").append(`
+    <div class="published-date">Published on ${formattedDate}</div>
+  `);
 
   const promises = $('img[src^="data:image"]')
     .map(async (_, img) => {
@@ -162,11 +161,15 @@ const main = async () => {
       process.exit(1);
     }
 
+    // read optional output dir
+    const outputDir = process.argv[3];
+
     const jsonContent = await fs.readFile(jsonPath, "utf8");
     const data = JSON.parse(jsonContent);
 
     // Create HTML directory
-    const htmlDir = "html";
+    const htmlDir = outputDir || join(process.cwd(), "html");
+
     try {
       await fs.mkdir(htmlDir);
     } catch (err) {
