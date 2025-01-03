@@ -8,7 +8,36 @@ Generated website:
 
 This is a simple script that turns a folder of your Apple notes into a website.
 
-### Installation
+### Installation (MacOS only)
+
+1. Download the binary:
+```bash
+curl -L https://github.com/29decibel/notes-to-blog/releases/download/v0.1.4/notes-to-blog-mac.tar.gz -o notes-to-blog.tar.gz
+```
+
+2. Extract the archive:
+```bash
+tar -xzf notes-to-blog.tar.gz
+```
+
+4. Make it executable:
+```bash
+sudo chmod +x notes-to-blog
+```
+
+### Usage
+
+```bash
+notes-to-blog <apple-notes-folder-name> <output-directory>
+```
+
+Example:
+```bash
+notes-to-blog Writing ~/Sites/blog
+```
+
+
+### Development
 Making sure you have [bun](https://bun.sh/) installed.
 
 ```bash
@@ -21,31 +50,6 @@ bun install
 bun run build
 ```
 
-### Usage
-
-Turn your Apple notes folder into a static website folder.
-
-```bash
-# You have an Apple notes folder called 'Writing'
-# This will output the static website to '../../writings/a-blog-from-apple-notes'
-./bin/notes-to-blog Writing '../../writings/a-blog-from-apple-notes'
-```
-
-This will generate this ready for deploy.
-
-```text
-➜ tree ../../writings/a-blog-from-apple-notes
-../../writings/a-blog-from-apple-notes
-├── Accessibility_matters.html
-├── README.md
-├── Second_note.html
-├── images
-│   └── image_d6c0acced5818399125ddbadd0ef788c.jpeg
-├── index.html
-└── style.css
-
-1 directory, 6 files
-```
 
 ### Free Github Pages
 
@@ -69,7 +73,7 @@ https://writing.dongbin.li/
 
 ### What's next
 
-- [ ] Single binary to simplify installation
+- [x] Single binary to simplify installation
 - [ ] Generate RSS feeds
 - [ ] Allow passing to custom CSS
 - [ ] Allow more metadata control on each notes
