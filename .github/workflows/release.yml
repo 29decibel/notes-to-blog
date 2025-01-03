@@ -34,8 +34,8 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            bin/generate-mac.tar.gz
-            bin/generate-mac.tar.gz.sha256
+            bin/notes-to-blog-mac.tar.gz
+            bin/notes-to-blog-mac.tar.gz.sha256
           name: Release ${{ github.ref_name }}
           draft: false
           prerelease: false
