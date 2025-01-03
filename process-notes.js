@@ -5,6 +5,7 @@ import { createHash } from "crypto";
 import { join } from "path";
 import * as cheerio from "cheerio";
 import { syncNotes } from "./sync-notes";
+import { styleString } from "./style";
 
 const extractImageInfo = (src) => {
   const cleanSrc = src.replace(/\\"/g, '"');
@@ -26,7 +27,7 @@ const extractImageInfo = (src) => {
 const copyStylesheet = async (htmlDir) => {
   try {
     // Read style.css from the same directory as the script
-    const css = await fs.readFile("style.css", "utf8");
+    const css = styleString;
     // Copy to html directory
     await fs.writeFile(join(htmlDir, "style.css"), css);
     console.log("Copied style.css to html directory");
@@ -224,6 +225,13 @@ async function generateSite(jsonPath, outputDir) {
 }
 
 async function main() {
+  // Check if required arguments are provided
+  if (process.argv.length < 4) {
+    console.error("Error: Missing required arguments");
+    console.log("Usage: generate <notesFolder> <outputDir>");
+    process.exit(1);
+  }
+
   const notesFolder = process.argv[2];
   const jsonPath = "blog.json";
   const outputDir = process.argv[3];
