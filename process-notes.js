@@ -53,6 +53,7 @@ const processHtml = async (html, imageDir, publishedDate) => {
   $("head").prepend(`
      <meta charset="UTF-8">
      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+     <meta name="viewport" content="width=device-width, initial-scale=1.0">
      <link rel="stylesheet" href="style.css">
    `);
 
@@ -60,6 +61,13 @@ const processHtml = async (html, imageDir, publishedDate) => {
   if (!$("body").length) {
     $("*").wrapAll("<body>");
   }
+
+  // add a simple site link to the top of the body
+  $("body").prepend(`
+    <div class="site-link">
+      <a href="/">Back to site</a>
+    </div>
+  `);
 
   // find the first h1 as title and append it as <title> element in the head
   const title = $("h1").first().text();
@@ -121,6 +129,7 @@ const generateIndex = async (notes, htmlDir, siteName) => {
   $("head").append(`
     <meta charset="UTF-8">
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css">
     <title>${siteName}</title>
   `);
