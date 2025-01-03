@@ -9,6 +9,9 @@ Making sure you have [bun](https://bun.sh/) installed.
 
 ```bash
 curl -fsSL https://bun.sh/install | bash
+
+# install dependencies
+bun install
 ```
 
 ### Usage
@@ -18,7 +21,7 @@ Turn your Apple notes folder into a static website folder.
 ```bash
 # You have an Apple notes folder called 'Writing'
 # This will output the static website to '../../writings/a-blog-from-apple-notes'
-./sync Writing '../../writings/a-blog-from-apple-notes'
+bun process-notes.js Writing '../../writings/a-blog-from-apple-notes'
 ```
 
 This will generate this ready for deploy.

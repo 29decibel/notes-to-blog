@@ -4,6 +4,7 @@ import { promises as fs } from "fs";
 import { createHash } from "crypto";
 import { join } from "path";
 import * as cheerio from "cheerio";
+import { syncNotes } from "./sync-notes";
 
 const extractImageInfo = (src) => {
   const cleanSrc = src.replace(/\\"/g, '"');
@@ -166,17 +167,8 @@ const generateIndex = async (notes, htmlDir, siteName) => {
   console.log(`Index page generated at ${indexPath}`);
 };
 
-const main = async () => {
+async function generateSite(jsonPath, outputDir) {
   try {
-    const jsonPath = process.argv[2];
-    if (!jsonPath) {
-      console.error("Please provide path to JSON file");
-      process.exit(1);
-    }
-
-    // read optional output dir
-    const outputDir = process.argv[3];
-
     const jsonContent = await fs.readFile(jsonPath, "utf8");
     const data = JSON.parse(jsonContent);
 
@@ -229,6 +221,15 @@ const main = async () => {
     console.error("Error:", error);
     process.exit(1);
   }
-};
+}
+
+async function main() {
+  const notesFolder = process.argv[2];
+  const jsonPath = "blog.json";
+  const outputDir = process.argv[3];
+
+  await syncNotes(notesFolder);
+  await generateSite(jsonPath, outputDir);
+}
 
 main();
