@@ -141,7 +141,7 @@ const generateIndex = async (notes, htmlDir, siteName) => {
       ${notes
         .sort((a, b) => new Date(b.created) - new Date(a.created)) // Sort by date, newest first
         .map((note) => {
-          const fileName = `${note.name.replace(/[^a-z0-9]/gi, "_")}.html`;
+          const fileName = note.name.replace(/[^a-z0-9]/gi, "_");
           const date = new Date(note.created).toLocaleDateString("en-US", {
             year: "numeric",
             month: "long",
