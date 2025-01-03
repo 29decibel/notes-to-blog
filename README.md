@@ -22,7 +22,7 @@ tar -xzf notes-to-blog.tar.gz
 
 4. Make it executable:
 ```bash
-sudo chmod +x notes-to-blog
+chmod +x notes-to-blog
 ```
 
 ### Usage
