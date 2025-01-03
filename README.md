@@ -28,7 +28,7 @@ Turn your Apple notes folder into a static website folder.
 ```bash
 # You have an Apple notes folder called 'Writing'
 # This will output the static website to '../../writings/a-blog-from-apple-notes'
-./bin/generate Writing '../../writings/a-blog-from-apple-notes'
+./bin/notes-to-blog Writing '../../writings/a-blog-from-apple-notes'
 ```
 
 This will generate this ready for deploy.

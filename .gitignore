@@ -6,3 +6,4 @@ blog_processed.json
 .ruby-lsp
 package-lock.json
 bin/generate
+bin/notes-to-blog

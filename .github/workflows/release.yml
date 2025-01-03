@@ -27,8 +27,8 @@ jobs:
       - name: Compress binary
         run: |
           cd bin
-          tar -czf generate-mac.tar.gz generate
-          shasum -a 256 generate-mac.tar.gz > generate-mac.tar.gz.sha256
+          tar -czf notes-to-blog-mac.tar.gz notes-to-blog
+          shasum -a 256 notes-to-blog-mac.tar.gz > notes-to-blog-mac.tar.gz.sha256
 
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v1
