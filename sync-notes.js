@@ -1,6 +1,5 @@
 import { exec } from "child_process";
 import { promisify } from "util";
-import { fileURLToPath } from "url";
 
 const execAsync = promisify(exec);
 
@@ -14,14 +13,42 @@ async function checkOsascript() {
   }
 }
 
+// make sure not using single quote in this script string
+const appleScript = (folderName) => {
+  return `
+  function run(argv) {
+    const folderName = "${folderName}";
+    const Notes = Application("Notes");
+    const blogFolder = Notes.folders.whose({ name: folderName })[0];
+
+    // Get all notes from the folder
+    const notes = blogFolder.notes();
+
+    // Map notes to a clean data structure
+    const notesData = notes.map((note) => ({
+      name: note.name(),
+      id: note.id(),
+      created: note.creationDate().toISOString(),
+      modified: note.modificationDate().toISOString(),
+      body: note.body(),
+    }));
+
+    // Output JSON directly
+    return JSON.stringify({ notes: notesData, name: folderName }, null, 2);
+  }
+  `;
+};
+
 export async function syncNotes(notesFolder) {
   // Check if osascript exists first
   await checkOsascript();
 
   // Construct the command
-  const command = `osascript save-notes-to-json.js "${notesFolder}" > blog.json`;
+  const command = `osascript -l JavaScript -e '${appleScript(notesFolder)}' > blog.json`;
 
-  console.log(`Executing command: ${command}`);
+  console.log(
+    `Syncing Apple notes folder: ${notesFolder}. This may take a while..`,
+  );
 
   try {
     const { stdout, stderr } = await execAsync(command);
