@@ -58,6 +58,8 @@ Here is an example site generated from Apple notes using Github pages (using cus
 https://writing.dongbin.li/
 
 ### What's next
+
+- [ ] Single binary to simplify installation
 - [ ] Generate RSS feeds
 - [ ] Allow passing to custom CSS
 - [ ] Allow more metadata control on each notes
