@@ -61,3 +61,15 @@ https://writing.dongbin.li/
 - [ ] Generate RSS feeds
 - [ ] Allow passing to custom CSS
 - [ ] Allow more metadata control on each notes
+
+
+### FAQ
+
+#### Will this send data anywhere?
+
+No. Everything is done locally by running some AppleScript. It then process the exported JSON, then generate the static files.
+
+#### Why using `bun` instead of NodeJS?
+
+Exported Apple notes HTML uses base64 encoded images. Which could be huge if the image is big (such as `dng` raw format).
+For macOS less than 8GB RAM, it crashed a lot. `bun` seems to handle this much better. And a lot faster too.
