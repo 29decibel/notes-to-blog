@@ -1,6 +1,10 @@
 ## Turn Apple notes folder to a website
 
+Apple Notes folder:
 ![apple-notes](./apple-notes.png)
+
+Generated website:
+![generated-website](./generated-website.png)
 
 This is a simple script that turns a folder of your Apple notes into a website.
 
