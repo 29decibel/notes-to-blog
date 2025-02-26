@@ -15,9 +15,20 @@ async function ensureAttachmentsDir() {
   }
 }
 
+// Add this mapping for file extensions
+const MIME_TO_EXT = {
+  png: "png",
+  jpeg: "jpg",
+  jpg: "jpg",
+  gif: "gif",
+  "x-adobe-dng": "dng",
+  dng: "dng",
+  // add more formats as needed
+};
+
 // Extract and save base64 images, return updated content
 async function processBase64Images(content, noteId) {
-  const base64Regex = /data:image\/(png|jpeg|jpg|gif);base64,([^"'\s]+)/g;
+  const base64Regex = /data:image\/([-\w.]+);base64,([^"'\s]+)/g;
   const noteDir = path.join(ATTACHMENTS_DIR, noteId);
 
   // Ensure note-specific directory exists
@@ -30,10 +41,13 @@ async function processBase64Images(content, noteId) {
   let counter = 1;
 
   while ((match = base64Regex.exec(content)) !== null) {
-    const [fullMatch, imageType, base64Data] = match;
+    const [fullMatch, mimeSubtype, base64Data] = match;
+
+    // Get the appropriate file extension
+    const ext = MIME_TO_EXT[mimeSubtype.toLowerCase()] || mimeSubtype;
 
     // Create filename
-    const filename = `image_${counter}.${imageType}`;
+    const filename = `image_${counter}.${ext}`;
     const filePath = path.join(noteDir, filename);
     const relativePath = path.join(noteId, filename);
 
@@ -46,6 +60,8 @@ async function processBase64Images(content, noteId) {
         fullMatch,
         `file://${relativePath}`,
       );
+
+      console.log(`Saved ${ext} image: ${filename}`);
 
       counter++;
     } catch (error) {
@@ -229,8 +245,57 @@ export async function syncNotes(notesFolder) {
   }
 }
 
+function listNotes(db) {
+  const query = db.prepare(`
+    SELECT
+      name as title,
+      created,
+      modified,
+      LENGTH(body) as content_size,
+      folder_name
+    FROM notes
+    ORDER BY modified DESC
+  `);
+
+  const notes = query.all();
+
+  console.log("\nNotes in database:");
+  console.log("=================");
+
+  notes.forEach((note) => {
+    // Convert content size to KB or MB
+    const size =
+      note.content_size > 1024 * 1024
+        ? `${(note.content_size / (1024 * 1024)).toFixed(2)} MB`
+        : `${(note.content_size / 1024).toFixed(2)} KB`;
+
+    // Format dates
+    const modified = new Date(note.modified).toLocaleString();
+    const created = new Date(note.created).toLocaleString();
+
+    console.log(`
+Title: ${note.title}
+Folder: ${note.folder_name}
+Created: ${created}
+Modified: ${modified}
+Content Size: ${size}
+-------------------`);
+  });
+
+  console.log(`\nTotal notes: ${notes.length}`);
+}
+
 if (import.meta.main) {
-  const folderName = process.argv[2] || "Blog";
-  console.log(`Starting sync for folder: ${folderName}`);
-  await syncNotes(folderName);
+  const db = initializeDatabase();
+
+  const command = process.argv[2];
+
+  if (command === "list") {
+    listNotes(db);
+    db.close();
+  } else {
+    const folderName = command || "Blog";
+    console.log(`Starting sync for folder: ${folderName}`);
+    await syncNotes(folderName);
+  }
 }
