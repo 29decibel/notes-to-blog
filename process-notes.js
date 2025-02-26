@@ -1,35 +1,32 @@
-#!/usr/bin/env node
-
 import { promises as fs } from "fs";
 import { createHash } from "crypto";
 import { join } from "path";
 import * as cheerio from "cheerio";
 import { syncNotes } from "./sync-notes";
 import { styleString } from "./style";
+import { Database } from "bun:sqlite";
+import { cp } from "fs/promises";
 
-const extractImageInfo = (src) => {
-  const cleanSrc = src.replace(/\\"/g, '"');
-  const [header, base64Data] = cleanSrc.split(",");
+function initializeDatabase() {
+  return new Database("notes.db", { create: true });
+}
 
-  if (!base64Data) return null;
-
-  const mimeMatch = header.match(/data:image\/([a-zA-Z0-9.-]+(?:;|$))/);
-  if (!mimeMatch) return null;
-
-  const mimeType = mimeMatch[1].replace(";", "");
-
-  return {
-    mimeType,
-    base64Data,
-  };
-};
+async function copyAttachmentsToOutput(outputDir) {
+  const destImagesDir = join(outputDir, "images");
+  try {
+    await fs.mkdir(destImagesDir, { recursive: true });
+    // Copy all contents from attachments folder to output images folder
+    await cp("attachments", destImagesDir, { recursive: true });
+    console.log("Copied attachments to output directory");
+  } catch (error) {
+    console.error("Error copying attachments:", error);
+    throw error;
+  }
+}
 
 const copyStylesheet = async (htmlDir) => {
   try {
-    // Read style.css from the same directory as the script
-    const css = styleString;
-    // Copy to html directory
-    await fs.writeFile(join(htmlDir, "style.css"), css);
+    await fs.writeFile(join(htmlDir, "style.css"), styleString);
     console.log("Copied style.css to html directory");
   } catch (error) {
     console.error("Error copying style.css:", error);
@@ -37,21 +34,11 @@ const copyStylesheet = async (htmlDir) => {
   }
 };
 
-const processHtml = async (html, imageDir, publishedDate) => {
-  try {
-    await fs.mkdir(imageDir);
-  } catch (err) {
-    if (err.code !== "EEXIST") throw err;
-  }
-
-  const processedImages = new Map();
+const processHtml = (html, publishedDate) => {
   const $ = cheerio.load(html);
 
-  // Add CSS link
+  // Add CSS link and meta tags
   $("head").length ? $("head") : $("html").prepend("<head>");
-  // $("head").prepend('<link rel="stylesheet" href="style.css">');
-
-  // Add UTF-8 meta tag and CSS link
   $("head").prepend(`
      <meta charset="UTF-8">
      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -64,18 +51,18 @@ const processHtml = async (html, imageDir, publishedDate) => {
     $("*").wrapAll("<body>");
   }
 
-  // add a simple site link to the top of the body
+  // Add site link
   $("body").prepend(`
     <div class="site-link">
       <a href="/">Back to site</a>
     </div>
   `);
 
-  // find the first h1 as title and append it as <title> element in the head
+  // Set title
   const title = $("h1").first().text();
   $("head").append(`<title>${title}</title>`);
 
-  // append published on date to the end of the body
+  // Add published date
   const formattedDate = new Date(publishedDate).toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
@@ -85,49 +72,21 @@ const processHtml = async (html, imageDir, publishedDate) => {
     <div class="published-date">Published on ${formattedDate}</div>
   `);
 
-  const promises = $('img[src^="data:image"]')
-    .map(async (_, img) => {
-      const src = $(img).attr("src");
-      if (!src) return;
+  // Update image paths if needed
+  $('img[src^="file://"]').each((_, img) => {
+    const src = $(img).attr("src");
+    const newSrc = src.replace("file://", "images/");
+    $(img).attr("src", newSrc);
+  });
 
-      const imageInfo = extractImageInfo(src);
-      if (!imageInfo) return;
-
-      const { mimeType, base64Data } = imageInfo;
-
-      const hash = createHash("md5").update(base64Data).digest("hex");
-
-      if (processedImages.has(hash)) {
-        $(img).attr("src", `images/${processedImages.get(hash)}`);
-        return;
-      }
-
-      const ext = mimeType.replace("x-adobe-", "");
-      const filename = `image_${hash}.${ext}`;
-      processedImages.set(hash, filename);
-
-      try {
-        const buffer = Buffer.from(base64Data, "base64");
-        await fs.writeFile(join(imageDir, filename), buffer);
-        $(img).attr("src", `images/${filename}`);
-        console.log(`Saved image: ${filename}`);
-      } catch (err) {
-        console.error(`Failed to save ${filename}:`, err);
-      }
-    })
-    .get();
-
-  await Promise.all(promises);
   return $.html();
 };
 
-// Add this new function to generate the index HTML
 const generateIndex = async (notes, htmlDir, siteName) => {
   const $ = cheerio.load(
     "<!DOCTYPE html><html><head></head><body></body></html>",
   );
 
-  // Add meta tags and CSS
   $("head").append(`
     <meta charset="UTF-8">
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -136,12 +95,11 @@ const generateIndex = async (notes, htmlDir, siteName) => {
     <title>${siteName}</title>
   `);
 
-  // Add header and list of notes
   $("body").append(`
     <h1>${siteName}</h1>
     <ul class="notes-list">
       ${notes
-        .sort((a, b) => new Date(b.created) - new Date(a.created)) // Sort by date, newest first
+        .sort((a, b) => new Date(b.created) - new Date(a.created))
         .map((note) => {
           const fileName = note.name.replace(/[^a-z0-9]/gi, "_");
           const date = new Date(note.created).toLocaleDateString("en-US", {
@@ -152,7 +110,7 @@ const generateIndex = async (notes, htmlDir, siteName) => {
           return `
             <li>
               <div class="note-link">
-                <a href="${fileName}">${note.name}</a>
+                <a href="${fileName}.html">${note.name}</a>
                 <span class="note-date">${date}</span>
               </div>
             </li>
@@ -162,62 +120,49 @@ const generateIndex = async (notes, htmlDir, siteName) => {
     </ul>
   `);
 
-  // Write the index file
   const indexPath = join(htmlDir, "index.html");
   await fs.writeFile(indexPath, $.html());
   console.log(`Index page generated at ${indexPath}`);
 };
 
-async function generateSite(jsonPath, outputDir) {
+async function generateSite(outputDir, folderName) {
   try {
-    const jsonContent = await fs.readFile(jsonPath, "utf8");
-    const data = JSON.parse(jsonContent);
+    const db = initializeDatabase();
 
-    // Create HTML directory
+    // Get all notes from database for the specified folder
+    const notes = db
+      .prepare(
+        `
+      SELECT * FROM notes
+      WHERE folder_name = ?
+      ORDER BY modified DESC
+    `,
+      )
+      .all(folderName);
+
+    // Create output directory
     const htmlDir = outputDir || join(process.cwd(), "html");
+    await fs.mkdir(htmlDir, { recursive: true });
 
-    try {
-      await fs.mkdir(htmlDir);
-    } catch (err) {
-      if (err.code !== "EEXIST") throw err;
+    // Copy stylesheet and attachments
+    await copyStylesheet(htmlDir);
+    await copyAttachmentsToOutput(htmlDir);
+
+    // Process each note and generate HTML
+    for (const note of notes) {
+      const processedHtml = processHtml(note.body, note.created);
+      const htmlPath = join(
+        htmlDir,
+        `${note.name.replace(/[^a-z0-9]/gi, "_")}.html`,
+      );
+      await fs.writeFile(htmlPath, processedHtml);
+      console.log(`HTML saved to ${htmlPath}`);
     }
 
-    // Create images directory inside HTML directory
-    const imageDir = join(htmlDir, "images");
-
-    // Copy stylesheet to html directory
-    await copyStylesheet(htmlDir);
-
-    const processedNotes = await Promise.all(
-      data.notes.map(async (note) => ({
-        ...note,
-        body: await processHtml(note.body, imageDir, note.created),
-      })),
-    );
-
-    const output = {
-      ...data,
-      notes: processedNotes,
-    };
-
-    const outputPath = jsonPath.replace(".json", "_processed.json");
-    await fs.writeFile(outputPath, JSON.stringify(output, null, 2));
-    console.log(`Processed JSON saved to ${outputPath}`);
-
-    // generate HTML files for each note
-    await Promise.all(
-      processedNotes.map(async (note) => {
-        const htmlPath = join(
-          htmlDir,
-          `${note.name.replace(/[^a-z0-9]/gi, "_")}.html`,
-        );
-        await fs.writeFile(htmlPath, note.body);
-        console.log(`HTML saved to ${htmlPath}`);
-      }),
-    );
-
     // Generate index.html
-    await generateIndex(processedNotes, htmlDir, data.name);
+    await generateIndex(notes, htmlDir, folderName);
+
+    db.close();
   } catch (error) {
     console.error("Error:", error);
     process.exit(1);
@@ -225,7 +170,6 @@ async function generateSite(jsonPath, outputDir) {
 }
 
 async function main() {
-  // Check if required arguments are provided
   if (process.argv.length < 4) {
     console.error("Error: Missing required arguments");
     console.log("Usage: generate <notesFolder> <outputDir>");
@@ -233,11 +177,13 @@ async function main() {
   }
 
   const notesFolder = process.argv[2];
-  const jsonPath = "blog.json";
   const outputDir = process.argv[3];
 
+  // First sync notes to database
   await syncNotes(notesFolder);
-  await generateSite(jsonPath, outputDir);
+
+  // Then generate the static site
+  await generateSite(outputDir, notesFolder);
 }
 
 main();
