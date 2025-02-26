@@ -38,28 +38,25 @@ on run argv
         log "Found " & (count of currentNotes) & " notes to export"
 
         repeat with currentNote in currentNotes
+            set noteId to id of currentNote
+            set md5Command to "echo -n '" & noteId & "' | md5"
+            set md5Hash to do shell script md5Command
+
+            set currentNoteFile to currentFolderPath & ":" & md5Hash & ".html"
+
             set currentNoteTitle to the name of currentNote
             set currentNoteBody to the body of currentNote
 
             log "Exporting note: " & currentNoteTitle
 
-            set allowedChars to "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._- "
-            set cleanTitle to ""
-            repeat with i from 1 to length of currentNoteTitle
-                set thisChar to character i of currentNoteTitle
-                if thisChar is not in allowedChars and ((ASCII character (0)) ≤ thisChar) and (thisChar < (ASCII character (128))) then
-                    set thisChar to "_"
-                end if
-                set cleanTitle to cleanTitle & thisChar
-            end repeat
+            -- set currentNoteFile to currentFolderPath & ":" & cleanTitle & ".html"
 
-            set currentNoteFile to currentFolderPath & ":" & cleanTitle & ".html"
             set fileHandle to open for access currentNoteFile with write permission
             write currentNoteBody to fileHandle starting at 0 as «class utf8»
             close access fileHandle
 
             repeat with currentAttachment in attachments of currentNote
-                set thePath to currentFolderPath & ":" & cleanTitle & "_" & (name of currentAttachment)
+                set thePath to currentFolderPath & ":" & md5Hash & "_" & (name of currentAttachment)
                 try
                     save currentAttachment in file (thePath)
                 end try
