@@ -7,3 +7,5 @@ blog_processed.json
 package-lock.json
 bin/generate
 bin/notes-to-blog
+notes.db
+attachments/

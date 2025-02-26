@@ -1,7 +1,7 @@
 {
   "name": "notes-to-blog",
-  "version": "1.0.0",
-  "description": "```bash osascript blog.js > blog.json ```",
+  "version": "1.0.1",
+  "description": "Turn your Apple notes folder into static site",
   "main": "blog.js",
   "type": "module",
   "scripts": {
