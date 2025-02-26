@@ -192,7 +192,7 @@ export async function syncNotes(notesFolder) {
 
   try {
     // First get metadata of all notes
-    console.log("Checking for updates...");
+    console.log(`Checking notes in folder "${notesFolder}"...`);
     const metadata = await getNotesMetadata(notesFolder);
 
     // Filter notes that need updating
