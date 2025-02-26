@@ -1,9 +1,60 @@
 import { exec } from "child_process";
 import { promisify } from "util";
 import { Database } from "bun:sqlite";
-import { readFile, unlink } from "fs/promises";
+import { readFile, unlink, mkdir, writeFile } from "fs/promises";
+import { existsSync } from "fs";
+import path from "path";
 
 const execAsync = promisify(exec);
+const ATTACHMENTS_DIR = "attachments";
+
+// Ensure attachments directory exists
+async function ensureAttachmentsDir() {
+  if (!existsSync(ATTACHMENTS_DIR)) {
+    await mkdir(ATTACHMENTS_DIR);
+  }
+}
+
+// Extract and save base64 images, return updated content
+async function processBase64Images(content, noteId) {
+  const base64Regex = /data:image\/(png|jpeg|jpg|gif);base64,([^"'\s]+)/g;
+  const noteDir = path.join(ATTACHMENTS_DIR, noteId);
+
+  // Ensure note-specific directory exists
+  if (!existsSync(noteDir)) {
+    await mkdir(noteDir, { recursive: true });
+  }
+
+  let match;
+  let updatedContent = content;
+  let counter = 1;
+
+  while ((match = base64Regex.exec(content)) !== null) {
+    const [fullMatch, imageType, base64Data] = match;
+
+    // Create filename
+    const filename = `image_${counter}.${imageType}`;
+    const filePath = path.join(noteDir, filename);
+    const relativePath = path.join(noteId, filename);
+
+    // Save image
+    try {
+      await writeFile(filePath, Buffer.from(base64Data, "base64"));
+
+      // Replace base64 data with local file reference
+      updatedContent = updatedContent.replace(
+        fullMatch,
+        `file://${relativePath}`,
+      );
+
+      counter++;
+    } catch (error) {
+      console.error(`Failed to save image ${filename}:`, error);
+    }
+  }
+
+  return updatedContent;
+}
 
 function initializeDatabase() {
   const db = new Database("notes.db", { create: true });
@@ -88,12 +139,20 @@ function getNoteFromDb(db, noteId) {
   return db.prepare("SELECT modified FROM notes WHERE id = ?").get(noteId);
 }
 
-function saveNotesToDatabase(db, notesData, folderName) {
+async function saveNotesToDatabase(db, notesData, folderName) {
+  // First process all images and collect the results
+  const processedNotes = await Promise.all(
+    notesData.map(async (note) => ({
+      ...note,
+      body: await processBase64Images(note.body, note.id),
+    })),
+  );
+
   const stmt = db.prepare(
     "INSERT OR REPLACE INTO notes (id, name, created, modified, body, folder_name) VALUES ($id, $name, $created, $modified, $body, $folder_name)",
   );
 
-  const tx = db.transaction((notes) => {
+  const tx = db.transaction(async (notes) => {
     for (const note of notes) {
       stmt.run({
         $id: note.id,
@@ -106,12 +165,14 @@ function saveNotesToDatabase(db, notesData, folderName) {
     }
   });
 
-  tx(notesData);
+  tx(processedNotes);
 }
 
 export async function syncNotes(notesFolder) {
   await checkOsascript();
   const db = initializeDatabase();
+
+  await ensureAttachmentsDir();
 
   try {
     // First get metadata of all notes
@@ -151,7 +212,8 @@ export async function syncNotes(notesFolder) {
     const updateIds = new Set(notesToUpdate.map((n) => n.id));
     notesData.notes = notesData.notes.filter((note) => updateIds.has(note.id));
 
-    saveNotesToDatabase(db, notesData.notes, notesData.name);
+    console.log("Processing attachments...");
+    await saveNotesToDatabase(db, notesData.notes, notesData.name);
 
     // Clean up
     await unlink(tempOutputFile);
