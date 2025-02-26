@@ -1,5 +1,4 @@
 import { promises as fs } from "fs";
-import { createHash } from "crypto";
 import { join } from "path";
 import * as cheerio from "cheerio";
 import { syncNotes } from "./sync-notes";
