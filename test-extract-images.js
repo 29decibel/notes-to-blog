@@ -11,6 +11,24 @@ function run(argv) {
   const outputDir = argv[0];
   console.log(`Using output directory: ${outputDir}`);
 
+  // Add MIME type to file extension mapping
+  const MIME_TO_EXT = {
+    png: "png",
+    jpeg: "jpg",
+    jpg: "jpg",
+    gif: "gif",
+    webp: "webp",
+    tiff: "tiff",
+    "x-adobe-dng": "dng",
+    dng: "dng",
+    bmp: "bmp",
+    "svg+xml": "svg",
+    svg: "svg",
+    heic: "heic",
+    heif: "heif",
+    // add more formats as needed
+  };
+
   // Sample HTML content with embedded base64 images
   const sampleContent = `
     <div>
@@ -48,31 +66,57 @@ function run(argv) {
     const [fullMatch, mimeType, base64Data] = match;
     console.log(`Found image ${counter} of type: ${mimeType}`);
 
-    // Define file extension based on MIME type
-    const ext =
-      mimeType.toLowerCase() === "jpeg" ? "jpg" : mimeType.toLowerCase();
+    // Get file extension from MIME type using the mapping
+    const mimeKey = mimeType.toLowerCase();
+    const ext = MIME_TO_EXT[mimeKey] || mimeKey;
+    console.log(`Using file extension: ${ext} for MIME type: ${mimeType}`);
+
     const filename = `image_${counter}.${ext}`;
     const filePath = `${outputDir}/${filename}`;
 
     console.log(`Saving image ${counter} to: ${filePath}`);
-    // log data
     console.log(`Base64 data length: ${base64Data.length}`);
-    console.log(base64Data);
 
-    // Handle large note bodies with NSFileManager
-    const nsString = $.NSString.alloc.initWithString(base64Data);
-    const nsData = nsString.dataUsingEncoding($.NSUTF8StringEncoding);
+    try {
+      // Always use this method to create nsString and nsData
+      const nsString = $.NSString.alloc.initWithString(base64Data);
+      const nsData = nsString.dataUsingEncoding($.NSUTF8StringEncoding);
 
-    // Write data to file
-    const success = nsData.writeToFileAtomically($(filePath), true);
+      // Write data to file
+      const success = nsData.writeToFileAtomically($(filePath), true);
 
-    if (success) {
-      console.log(`Successfully saved image to ${filePath}`);
+      if (success) {
+        console.log(`Successfully saved image to ${filePath}`);
 
-      // Replace the base64 data with a file reference in updated content
-      updatedContent = updatedContent.replace(fullMatch, `file://${filePath}`);
-    } else {
-      console.log(`Failed to save image to ${filePath}`);
+        // Replace the base64 data with a file reference in updated content
+        updatedContent = updatedContent.replace(
+          fullMatch,
+          `file://${filePath}`,
+        );
+      } else {
+        console.log(`Failed to save image to ${filePath}`);
+      }
+    } catch (error) {
+      console.log(`Error processing image: ${error}`);
+
+      // Fallback to shell command if needed
+      try {
+        const escapedBase64 = base64Data.replace(/'/g, "'\\''");
+        app.doShellScript(
+          `echo '${escapedBase64}' | base64 -D > "${filePath}"`,
+        );
+        console.log(
+          `Successfully saved image using shell command to ${filePath}`,
+        );
+
+        // Replace the base64 data with a file reference in updated content
+        updatedContent = updatedContent.replace(
+          fullMatch,
+          `file://${filePath}`,
+        );
+      } catch (shellError) {
+        console.log(`Shell fallback also failed: ${shellError}`);
+      }
     }
 
     counter++;
