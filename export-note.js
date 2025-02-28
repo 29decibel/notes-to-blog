@@ -6,6 +6,20 @@ function run(argv) {
     );
   }
 
+  /**
+   *
+   * @param {String | null} filename
+   * @returns {String} extension name
+   */
+  function getFileExtension(filename) {
+    if (!filename) {
+      return "";
+    }
+
+    const parts = filename.split(".");
+    return parts.length > 1 ? parts.pop().toLowerCase() : "";
+  }
+
   const folderName = argv[0];
   const exportPath = argv[1];
   console.log(
@@ -65,55 +79,56 @@ function run(argv) {
 
     console.log("Writing note to file: " + currentNoteFile);
 
-    console.log("get nsstriong ");
     // Handle large note bodies with NSFileManager
     const nsString = $.NSString.alloc.initWithString(currentNoteBody);
-
-    // log get data
-    console.log("get data ");
     const nsData = nsString.dataUsingEncoding($.NSUTF8StringEncoding);
-
-    // Write the file directly using NSData's writeToFile method
-    console.log("write to file ");
     const success = nsData.writeToFileAtomically($(currentNoteFile), true);
 
     if (!success) {
       console.log("Error writing note: " + currentNoteTitle);
     }
 
-    console.log("get attachment...");
+    console.log("Getting attachment...");
     const attachments = currentNote.attachments();
     for (let j = 0; j < attachments.length; j++) {
       const currentAttachment = attachments[j];
       const attachmentName = currentAttachment.name();
-      const thePath = currentFolderPath + "/" + md5Hash + "_" + attachmentName;
+      // const thePath = currentFolderPath + "/" + md5Hash + "_" + attachmentName;
+      const contentId = currentAttachment.contentIdentifier();
+      const attachmentHash = app
+        .doShellScript(
+          "echo -n '" + contentId.replace(/'/g, "'\\''") + "' | md5",
+        )
+        .trim();
+
+      const thePath =
+        currentFolderPath +
+        "/" +
+        md5Hash +
+        "_" +
+        attachmentHash +
+        "." +
+        getFileExtension(attachmentName);
 
       // log attachment info
       // contentIdentifier
       // modificationDate
       // url
-      console.log("Attachment: " + attachmentName);
-      console.log(
-        "Content Identifier: " + currentAttachment.contentIdentifier(),
-      );
-      console.log("Modification Date: " + currentAttachment.modificationDate());
-      console.log("URL: " + currentAttachment.url());
+      // console.log("Attachment: " + attachmentName);
+      // console.log(
+      //   "Content Identifier: " + currentAttachment.contentIdentifier(),
+      // );
+      // console.log("Modification Date: " + currentAttachment.modificationDate());
+      // console.log("URL: " + currentAttachment.url());
 
       try {
-        console.log(attachmentName + " " + thePath);
-        currentAttachment.save({ in: Path(thePath) });
+        console.log("Saving ---> " + attachmentName + " " + thePath);
+        if (attachmentName) {
+          currentAttachment.save({ in: Path(thePath) });
+        } else {
+          console.log("No attachment name, skipping...");
+        }
       } catch (e) {
-        // log attachmetn name and info
-        // log with emoji
-        console.log("🚫");
-        console.log("Attachment: " + attachmentName);
-        console.log(
-          "Content Identifier: " + currentAttachment.contentIdentifier(),
-        );
-        console.log(
-          "Modification Date: " + currentAttachment.modificationDate(),
-        );
-        console.log("URL: " + currentAttachment.url());
         console.log("Error saving attachment: " + e);
       }
     }
