@@ -5,7 +5,7 @@
   "main": "blog.js",
   "type": "module",
   "scripts": {
-    "build": "bun build ./process-notes.js --compile --outfile ./bin/notes-to-blog"
+    "build": "bun build ./main.js --compile --outfile ./bin/notes-to-blog"
   },
   "author": "",
   "license": "ISC",

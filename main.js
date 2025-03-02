@@ -1,22 +1,55 @@
 import { promises as fs } from "fs";
-import { join } from "path";
+import { join, dirname } from "path";
 import * as cheerio from "cheerio";
 import { syncNotes } from "./sync-notes";
 import { styleString } from "./style";
 import { Database } from "bun:sqlite";
-import { cp } from "fs/promises";
+import { cp, mkdir } from "fs/promises";
+import { existsSync } from "fs";
 
 function initializeDatabase() {
   return new Database("notes.db", { create: true });
 }
 
-async function copyAttachmentsToOutput(outputDir) {
+async function copyRequiredAttachments(outputDir, notes) {
   const destImagesDir = join(outputDir, "images");
   try {
     await fs.mkdir(destImagesDir, { recursive: true });
-    // Copy all contents from attachments folder to output images folder
-    await cp("attachments", destImagesDir, { recursive: true });
-    console.log("Copied attachments to output directory");
+
+    // Collect all required images from all notes
+    let requiredImages = [];
+    for (const note of notes) {
+      // Parse images data from the database
+      if (note.images && note.images.trim()) {
+        try {
+          const noteImages = JSON.parse(note.images);
+          requiredImages = requiredImages.concat(noteImages);
+        } catch (error) {
+          console.error(`Error parsing images for note "${note.name}":`, error);
+        }
+      }
+    }
+
+    // Copy only the required images
+    for (const image of requiredImages) {
+      const sourcePath = join("attachments", image.path);
+      const destPath = join(destImagesDir, image.path);
+
+      // Ensure the destination directory exists
+      await mkdir(dirname(destPath), { recursive: true });
+
+      // Copy the image file if it exists
+      if (existsSync(sourcePath)) {
+        await cp(sourcePath, destPath);
+        console.log(`Copied image: ${image.path}`);
+      } else {
+        console.warn(`Warning: Image file not found: ${sourcePath}`);
+      }
+    }
+
+    console.log(
+      `Copied ${requiredImages.length} required images to output directory`,
+    );
   } catch (error) {
     console.error("Error copying attachments:", error);
     throw error;
@@ -143,9 +176,11 @@ async function generateSite(outputDir, folderName) {
     const htmlDir = outputDir || join(process.cwd(), "html");
     await fs.mkdir(htmlDir, { recursive: true });
 
-    // Copy stylesheet and attachments
+    // Copy stylesheet
     await copyStylesheet(htmlDir);
-    await copyAttachmentsToOutput(htmlDir);
+
+    // Copy only required attachments instead of all attachments
+    await copyRequiredAttachments(htmlDir, notes);
 
     // Process each note and generate HTML
     for (const note of notes) {

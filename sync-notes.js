@@ -26,7 +26,7 @@ const MIME_TO_EXT = {
   // add more formats as needed
 };
 
-// Extract and save base64 images, return updated content
+// Extract and save base64 images, return updated content and a list of extracted images
 async function processBase64Images(content, noteId) {
   const base64Regex = /data:image\/([-\w.]+);base64,([^"'\s]+)/g;
   const noteDir = path.join(ATTACHMENTS_DIR, noteId);
@@ -39,6 +39,8 @@ async function processBase64Images(content, noteId) {
   let match;
   let updatedContent = content;
   let counter = 1;
+  // Track extracted images
+  const extractedImages = [];
 
   while ((match = base64Regex.exec(content)) !== null) {
     const [fullMatch, mimeSubtype, base64Data] = match;
@@ -61,6 +63,14 @@ async function processBase64Images(content, noteId) {
         `file://${relativePath}`,
       );
 
+      // Add image info to the extracted list
+      extractedImages.push({
+        originalIndex: counter,
+        filename: filename,
+        path: relativePath,
+        mimeType: `image/${mimeSubtype}`,
+      });
+
       console.log(`Saved ${ext} image: ${filename}`);
 
       counter++;
@@ -69,7 +79,10 @@ async function processBase64Images(content, noteId) {
     }
   }
 
-  return updatedContent;
+  return {
+    updatedContent,
+    extractedImages,
+  };
 }
 
 function initializeDatabase() {
@@ -82,7 +95,8 @@ function initializeDatabase() {
       created TEXT,
       modified TEXT,
       body TEXT,
-      folder_name TEXT
+      folder_name TEXT,
+      images TEXT
     )
   `);
 
@@ -158,14 +172,21 @@ function getNoteFromDb(db, noteId) {
 async function saveNotesToDatabase(db, notesData, folderName) {
   // First process all images and collect the results
   const processedNotes = await Promise.all(
-    notesData.map(async (note) => ({
-      ...note,
-      body: await processBase64Images(note.body, note.id),
-    })),
+    notesData.map(async (note) => {
+      const { updatedContent, extractedImages } = await processBase64Images(
+        note.body,
+        note.id,
+      );
+      return {
+        ...note,
+        body: updatedContent,
+        images: JSON.stringify(extractedImages),
+      };
+    }),
   );
 
   const stmt = db.prepare(
-    "INSERT OR REPLACE INTO notes (id, name, created, modified, body, folder_name) VALUES ($id, $name, $created, $modified, $body, $folder_name)",
+    "INSERT OR REPLACE INTO notes (id, name, created, modified, body, folder_name, images) VALUES ($id, $name, $created, $modified, $body, $folder_name, $images)",
   );
 
   const tx = db.transaction(async (notes) => {
@@ -177,6 +198,7 @@ async function saveNotesToDatabase(db, notesData, folderName) {
         $modified: note.modified,
         $body: note.body,
         $folder_name: folderName,
+        $images: note.images,
       });
     }
   });
@@ -252,7 +274,8 @@ function listNotes(db) {
       created,
       modified,
       LENGTH(body) as content_size,
-      folder_name
+      folder_name,
+      images
     FROM notes
     ORDER BY modified DESC
   `);
@@ -273,12 +296,22 @@ function listNotes(db) {
     const modified = new Date(note.modified).toLocaleString();
     const created = new Date(note.created).toLocaleString();
 
+    // Parse and count images
+    let imageCount = 0;
+    try {
+      const images = JSON.parse(note.images || "[]");
+      imageCount = images.length;
+    } catch (e) {
+      console.error(`Error parsing images for note "${note.title}":`, e);
+    }
+
     console.log(`
 Title: ${note.title}
 Folder: ${note.folder_name}
 Created: ${created}
 Modified: ${modified}
 Content Size: ${size}
+Images: ${imageCount}
 -------------------`);
   });
 
