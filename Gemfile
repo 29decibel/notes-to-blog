@@ -11,3 +11,5 @@ group :development do
 end
 
 gem "mini_magick", "~> 5.2"
+
+gem "sqlite3", "~> 2.6"

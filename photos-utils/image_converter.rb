@@ -391,7 +391,7 @@ end
 if __FILE__ == $PROGRAM_NAME
   options = {
     output_format: ImageConverter::DEFAULT_WEB_FORMAT,
-    quality: 85,
+    quality: 95,
     thumbnail_sizes: ImageConverter::THUMBNAIL_SIZES,
     strip_metadata: true,
     verbose: false,
