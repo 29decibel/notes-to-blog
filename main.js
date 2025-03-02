@@ -6,6 +6,8 @@ import { styleString } from "./style";
 import { Database } from "bun:sqlite";
 import { cp, mkdir } from "fs/promises";
 import { existsSync } from "fs";
+import { generateBlogIndex } from "./themes/blog-index";
+import { generatePhotosIndex } from "./themes/photos-index";
 
 function initializeDatabase() {
   return new Database("notes.db", { create: true });
@@ -114,50 +116,7 @@ const processHtml = (html, publishedDate) => {
   return $.html();
 };
 
-const generateIndex = async (notes, htmlDir, siteName) => {
-  const $ = cheerio.load(
-    "<!DOCTYPE html><html><head></head><body></body></html>",
-  );
-
-  $("head").append(`
-    <meta charset="UTF-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style.css">
-    <title>${siteName}</title>
-  `);
-
-  $("body").append(`
-    <h1>${siteName}</h1>
-    <ul class="notes-list">
-      ${notes
-        .sort((a, b) => new Date(b.created) - new Date(a.created))
-        .map((note) => {
-          const fileName = note.name.replace(/[^a-z0-9]/gi, "_");
-          const date = new Date(note.created).toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          });
-          return `
-            <li>
-              <div class="note-link">
-                <a href="${fileName}.html">${note.name}</a>
-                <span class="note-date">${date}</span>
-              </div>
-            </li>
-          `;
-        })
-        .join("")}
-    </ul>
-  `);
-
-  const indexPath = join(htmlDir, "index.html");
-  await fs.writeFile(indexPath, $.html());
-  console.log(`Index page generated at ${indexPath}`);
-};
-
-async function generateSite(outputDir, folderName) {
+async function generateSite(outputDir, folderName, indexPageGeneartor) {
   try {
     const db = initializeDatabase();
 
@@ -194,7 +153,7 @@ async function generateSite(outputDir, folderName) {
     }
 
     // Generate index.html
-    await generateIndex(notes, htmlDir, folderName);
+    await indexPageGeneartor(notes, htmlDir, folderName);
 
     db.close();
   } catch (error) {
@@ -206,18 +165,34 @@ async function generateSite(outputDir, folderName) {
 async function main() {
   if (process.argv.length < 4) {
     console.error("Error: Missing required arguments");
-    console.log("Usage: generate <notesFolder> <outputDir>");
+    console.log("Usage: generate <notesFolder> <outputDir> [theme]");
+    console.log("Available themes: blog (default), photos");
     process.exit(1);
   }
 
   const notesFolder = process.argv[2];
   const outputDir = process.argv[3];
+  const theme = process.argv[4] || "blog"; // Default to blog theme if not specified
+
+  // Select the appropriate index generator based on the theme
+  let indexPageGenerator;
+  switch (theme.toLowerCase()) {
+    case "photos":
+      indexPageGenerator = generatePhotosIndex;
+      console.log("Using photos theme for index page");
+      break;
+    case "blog":
+    default:
+      indexPageGenerator = generateBlogIndex;
+      console.log("Using blog theme for index page");
+      break;
+  }
 
   // First sync notes to database
   await syncNotes(notesFolder);
 
-  // Then generate the static site
-  await generateSite(outputDir, notesFolder);
+  // Then generate the static site with the selected index generator
+  await generateSite(outputDir, notesFolder, indexPageGenerator);
 }
 
 main();
